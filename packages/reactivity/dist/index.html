@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script type="module">
+    // import { reactive } from "/node_modules/vue/dist/vue.esm-browser.js"
+    import { reactive, effect } from "./reactivity.js"
+
+    const sourceData = {
+      name: 'jingzhi',
+      age: 18
+    }
+
+    const state = reactive(sourceData)
+
+    effect(() => {
+      app.innerHTML = `
+        <div>
+          <p>姓名：${state.name}</p>
+          <p>年龄：${state.age}</p>
+        </div>
+      `
+    })
+
+    setTimeout(() => {
+      state.age++
+    }, 1000);
+  </script>
+</body>
+</html>
