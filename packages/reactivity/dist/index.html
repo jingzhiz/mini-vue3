@@ -9,19 +9,34 @@
   <div id="app"></div>
 
   <script type="module">
-    // import { ref, reactive, effect } from "/node_modules/vue/dist/vue.esm-browser.js"
-    import { ref, reactive, effect } from "./reactivity.js"
+    // import { ref, toRef, toRefs, reactive, effect, proxyRefs } from "/node_modules/vue/dist/vue.esm-browser.js"
+    import { ref, toRef, toRefs, reactive, effect, isRef, proxyRefs } from "./reactivity.js"
 
-    const flag = ref(true)
+    const state = reactive({ name: 'jingzhi', age: 18 })
+
+    // const name = toRef(state, 'name')
+    // const age = toRef(state, 'age')
+
+    const { name, age } = toRefs(state)
+
+    const proxy = proxyRefs(state)
+
+    console.log(name, age, proxy.name, isRef(name))
 
     effect(() => {
       console.log('effect execute')
 
-      app.innerHTML = flag.value ? 'true' : 'false'
+      app.innerHTML = `
+        <div>
+          <p>name: ${name.value}</p>
+          <p>age: ${age.value}</p>
+        </div>
+      `
     })
 
     setTimeout(() => {
-      flag.value = false
+      name.value = 'jingzhi2'
+      age.value = 19
     }, 1000);
   </script>
 </body>

@@ -164,6 +164,35 @@ function toReactive(value) {
 function ref(target) {
   return createRef(target);
 }
+function toRef(target, key) {
+  return new ObjectRefImpl(target, key);
+}
+function toRefs(target) {
+  return Object.keys(target).reduce((result, key) => {
+    result[key] = toRef(target, key);
+    return result;
+  }, {});
+}
+function isRef(target) {
+  return !!target?.__v_isRef;
+}
+function proxyRefs(objectWithRef) {
+  return new Proxy(objectWithRef, {
+    get(target, key, receiver) {
+      const r = Reflect.get(target, key, receiver);
+      return isRef(r) ? r.value : r;
+    },
+    set(target, key, value, receiver) {
+      const oldValue = target[key];
+      if (isRef(oldValue)) {
+        oldValue.value = value;
+        return true;
+      } else {
+        return Reflect.set(target, key, value, receiver);
+      }
+    }
+  });
+}
 function createRef(target) {
   return new RefImpl(target);
 }
@@ -171,7 +200,6 @@ var RefImpl = class {
   constructor(rawValue) {
     this.rawValue = rawValue;
     this.__v_isRef = true;
-    this._value = void 0;
     this._value = toReactive(rawValue);
   }
   get value() {
@@ -182,6 +210,23 @@ var RefImpl = class {
     if (newVal !== this.rawValue) {
       this._value = newVal;
       this.rawValue = newVal;
+      triggerRefValue(this);
+    }
+  }
+};
+var ObjectRefImpl = class {
+  constructor(_target, _key) {
+    this._target = _target;
+    this._key = _key;
+    this.__v_isRef = true;
+  }
+  get value() {
+    trackRefValue(this);
+    return this._target[this._key];
+  }
+  set value(newVal) {
+    if (newVal !== this._target[this._key]) {
+      this._target[this._key] = newVal;
       triggerRefValue(this);
     }
   }
@@ -203,9 +248,13 @@ function triggerRefValue(ref2) {
 export {
   activeEffect,
   effect,
+  isRef,
+  proxyRefs,
   reactive,
   ref,
   toReactive,
+  toRef,
+  toRefs,
   trackEffect,
   triggerEffect
 };
