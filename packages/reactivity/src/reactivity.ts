@@ -3,7 +3,7 @@ import { ReactivityFlags, mutableHandlers } from './baseHandler'
 
 const reactiveMap = new WeakMap() // 缓存
 
-function createReactiveObject(target: unknown) {
+function createReactiveObject(target) {
   if (!isObject(target)) return target
 
   // 如果已经是代理对象则直接返回
@@ -17,6 +17,10 @@ function createReactiveObject(target: unknown) {
   return proxy
 }
 
-export function reactive(target: unknown) {
+export function reactive(target) {
   return createReactiveObject(target)
+}
+
+export function toReactive(value) {
+  return isObject(value) ? reactive(value) : value
 }

@@ -9,30 +9,19 @@
   <div id="app"></div>
 
   <script type="module">
-    // import { reactive, effect } from "/node_modules/vue/dist/vue.esm-browser.js"
-    import { reactive, effect } from "./reactivity.js"
+    // import { ref, reactive, effect } from "/node_modules/vue/dist/vue.esm-browser.js"
+    import { ref, reactive, effect } from "./reactivity.js"
 
-    const state = reactive({
-      age: 18,
-      name: 'jingzhi',
-      flag: true,
-      address: {
-        city: 'beijing'
-      }
-    })
+    const flag = ref(true)
 
-    let runner = effect(
-      () => {
+    effect(() => {
       console.log('effect execute')
 
-      app.innerHTML = state.address.city
-
-      // 在执行 effect 期间更新数据，不会触发 effect 再次执行
-      // state.name = Math.random()
+      app.innerHTML = flag.value ? 'true' : 'false'
     })
 
     setTimeout(() => {
-      state.address.city = 'shanghai'
+      flag.value = false
     }, 1000);
   </script>
 </body>

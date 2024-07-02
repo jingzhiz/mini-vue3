@@ -156,10 +156,56 @@ function createReactiveObject(target) {
 function reactive(target) {
   return createReactiveObject(target);
 }
+function toReactive(value) {
+  return isObject(value) ? reactive(value) : value;
+}
+
+// packages/reactivity/src/ref.ts
+function ref(target) {
+  return createRef(target);
+}
+function createRef(target) {
+  return new RefImpl(target);
+}
+var RefImpl = class {
+  constructor(rawValue) {
+    this.rawValue = rawValue;
+    this.__v_isRef = true;
+    this._value = void 0;
+    this._value = toReactive(rawValue);
+  }
+  get value() {
+    trackRefValue(this);
+    return this._value;
+  }
+  set value(newVal) {
+    if (newVal !== this.rawValue) {
+      this._value = newVal;
+      this.rawValue = newVal;
+      triggerRefValue(this);
+    }
+  }
+};
+function trackRefValue(ref2) {
+  if (activeEffect) {
+    trackEffect(
+      activeEffect,
+      ref2._deps = createDep("value", () => ref2.dep = void 0)
+    );
+  }
+}
+function triggerRefValue(ref2) {
+  let dep = ref2._deps;
+  if (dep) {
+    triggerEffect(dep);
+  }
+}
 export {
   activeEffect,
   effect,
   reactive,
+  ref,
+  toReactive,
   trackEffect,
   triggerEffect
 };

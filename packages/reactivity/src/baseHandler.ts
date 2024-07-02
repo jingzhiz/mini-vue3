@@ -4,6 +4,7 @@ import { tracker, trigger } from "./reactivityEffect"
 
 export enum ReactivityFlags {
   IS_REACTIVE = '__v_isReactive',
+  IS_REF = '__v_isRef'
 }
 
 export const mutableHandlers: ProxyHandler<any> = {
