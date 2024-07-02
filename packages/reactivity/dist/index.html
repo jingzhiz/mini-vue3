@@ -18,20 +18,24 @@
       flag: true
     })
 
-    effect(() => {
+    let runner = effect(
+      () => {
       console.log('effect execute')
 
       app.innerHTML = state.flag ?  state.name : state.age
       // app.innerHTML = state.flag + state.flag + state.flag
+    },
+    {
+      scheduler: () => {
+        console.log('scheduler execute before') // AOP
+        runner()
+        console.log('scheduler execute after')
+      }
     })
 
     setTimeout(() => {
       state.flag = false
-
-      setTimeout(() => {
-        console.log('属性修改了，但不应该在触发effect执行了')
-        state.name = '张三'
-      }, 1000);
+      state.age = 20
     }, 1000);
   </script>
 </body>
