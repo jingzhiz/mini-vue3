@@ -15,27 +15,24 @@
     const state = reactive({
       age: 18,
       name: 'jingzhi',
-      flag: true
+      flag: true,
+      address: {
+        city: 'beijing'
+      }
     })
 
     let runner = effect(
       () => {
       console.log('effect execute')
 
-      app.innerHTML = state.flag ?  state.name : state.age
-      // app.innerHTML = state.flag + state.flag + state.flag
-    },
-    {
-      scheduler: () => {
-        console.log('scheduler execute before') // AOP
-        runner()
-        console.log('scheduler execute after')
-      }
+      app.innerHTML = state.address.city
+
+      // 在执行 effect 期间更新数据，不会触发 effect 再次执行
+      // state.name = Math.random()
     })
 
     setTimeout(() => {
-      state.flag = false
-      state.age = 20
+      state.address.city = 'shanghai'
     }, 1000);
   </script>
 </body>

@@ -39,6 +39,7 @@ var ReactiveEffect = class {
     this._deps = [];
     // 用于记录收集器
     this._depsLen = 0;
+    this._running = 0;
     // 创建的 effect 默认是响应式的
     this.active = true;
   }
@@ -50,8 +51,10 @@ var ReactiveEffect = class {
     try {
       activeEffect = this;
       preCleanEffect(this);
+      this._running++;
       return this.fn();
     } finally {
+      this._running--;
       postCleanEffect(this);
       activeEffect = lastEffect;
     }
@@ -76,7 +79,9 @@ function trackEffect(effect2, dep) {
 }
 function triggerEffect(dep) {
   for (const effect2 of dep.keys()) {
-    effect2?.scheduler();
+    if (!effect2._running) {
+      effect2?.scheduler();
+    }
   }
 }
 
@@ -124,6 +129,9 @@ var mutableHandlers = {
     if (key === "__v_isReactive" /* IS_REACTIVE */) return true;
     const res = Reflect.get(target, key, receiver);
     tracker(target, key);
+    if (isObject(res)) {
+      return reactive(res);
+    }
     return res;
   },
   set(target, key, value, receiver) {

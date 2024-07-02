@@ -1,4 +1,7 @@
+import { isObject } from "@vue/shared"
+import { reactive } from "./reactivity"
 import { tracker, trigger } from "./reactivityEffect"
+
 export enum ReactivityFlags {
   IS_REACTIVE = '__v_isReactive',
 }
@@ -8,6 +11,11 @@ export const mutableHandlers: ProxyHandler<any> = {
     if (key === ReactivityFlags.IS_REACTIVE) return true
     const res = Reflect.get(target, key, receiver)
     tracker(target, key)
+
+    if (isObject(res)) { // 递归代理
+      return reactive(res)
+    }
+
     return res
   },
   set(target, key, value, receiver) {

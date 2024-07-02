@@ -45,6 +45,7 @@ class ReactiveEffect {
   _trackId = 0 // 用于记录当前 effect 执行次数（防止一个依赖在同一个 effect 中多次被收集）
   _deps = [] // 用于记录收集器
   _depsLen = 0
+  _running = 0;
 
   // 创建的 effect 默认是响应式的
   public active = true
@@ -63,9 +64,10 @@ class ReactiveEffect {
 
       // 每次执行前将上一次依赖清空
       preCleanEffect(this)
-
+      this._running++
       return this.fn()
     } finally {
+      this._running--
       postCleanEffect(this)
       activeEffect = lastEffect
     }
@@ -99,6 +101,9 @@ export function trackEffect(effect, dep: Map<any, any>) {
 export function triggerEffect(dep: Map<any, any>) {
   // 触发 effect 执行
   for (const effect of dep.keys()) {
-    effect?.scheduler()
+    if (!effect._running) {
+      // 处于执行中状态的化，不允许其再次执行
+      effect?.scheduler()
+    }
   }
 }
