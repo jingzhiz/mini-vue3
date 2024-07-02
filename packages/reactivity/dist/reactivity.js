@@ -6,12 +6,30 @@ function effect(fn, options) {
   _effect.run();
 }
 var activeEffect;
+function preCleanEffect(effect2) {
+  effect2._trackId++;
+  effect2._depsLen = 0;
+}
+function postCleanEffect(effect2) {
+  if (effect2._deps.length !== effect2._depsLen) {
+    for (let i = effect2._depsLen; i < effect2._deps.length; i++) {
+      cleanDepEffect(effect2._deps[i], effect2);
+    }
+  }
+  effect2._deps.length = effect2._depsLen;
+}
+function cleanDepEffect(dep, effect2) {
+  dep.delete(effect2);
+  if (dep.size === 0) {
+    dep.cleanup();
+  }
+}
 var ReactiveEffect = class {
   constructor(fn, scheduler) {
     this.fn = fn;
     this.scheduler = scheduler;
     this._trackId = 0;
-    // 用于记录当前 effect 执行了多少次
+    // 用于记录当前 effect 执行次数（防止一个依赖在同一个 effect 中多次被收集）
     this._deps = [];
     // 用于记录收集器
     this._depsLen = 0;
@@ -25,8 +43,10 @@ var ReactiveEffect = class {
     const lastEffect = activeEffect;
     try {
       activeEffect = this;
+      preCleanEffect(this);
       return this.fn();
     } finally {
+      postCleanEffect(this);
       activeEffect = lastEffect;
     }
   }
@@ -35,8 +55,18 @@ var ReactiveEffect = class {
   }
 };
 function trackEffect(effect2, dep) {
-  dep.set(effect2, effect2._trackId);
-  effect2._deps[effect2._depsLen++] = dep;
+  if (dep.get(effect2) !== effect2._trackId) {
+    dep.set(effect2, effect2._trackId);
+    const oldDep = effect2._deps[effect2._depsLen];
+    if (oldDep !== dep) {
+      if (oldDep) {
+        cleanDepEffect(oldDep, effect2);
+      }
+      effect2._deps[effect2._depsLen++] = dep;
+    } else {
+      effect2._depsLen++;
+    }
+  }
 }
 function triggerEffect(dep) {
   for (const effect2 of dep.keys()) {

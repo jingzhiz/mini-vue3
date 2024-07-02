@@ -17,7 +17,7 @@ export function tracker(target, key) {
     let depsMap = effectBuckets.get(target)
 
     if (!depsMap) {
-      effectBuckets.set(target, (depsMap = new Map))
+      effectBuckets.set(target, (depsMap = new Map()))
     }
 
     let dep = depsMap.get(key)
