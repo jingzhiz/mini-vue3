@@ -9,35 +9,40 @@
   <div id="app"></div>
 
   <script type="module">
-    // import { ref, toRef, toRefs, reactive, effect, proxyRefs } from "/node_modules/vue/dist/vue.esm-browser.js"
-    import { ref, toRef, toRefs, reactive, effect, isRef, proxyRefs } from "./reactivity.js"
+    // import {
+    //   ref,
+    //   toRef,
+    //   toRefs,
+    //   reactive,
+    //   effect,
+    //   proxyRefs,
+    //   computed
+    // } from "/node_modules/vue/dist/vue.esm-browser.js"
+    import {
+      ref,
+      toRef,
+      toRefs,
+      reactive,
+      effect,
+      isRef,
+      proxyRefs,
+      computed
+    } from "./reactivity.js"
 
     const state = reactive({ name: 'jingzhi', age: 18 })
 
-    // const name = toRef(state, 'name')
-    // const age = toRef(state, 'age')
-
-    const { name, age } = toRefs(state)
-
-    const proxy = proxyRefs(state)
-
-    console.log(name, age, proxy.name, isRef(name))
-
-    effect(() => {
-      console.log('effect execute')
-
-      app.innerHTML = `
-        <div>
-          <p>name: ${name.value}</p>
-          <p>age: ${age.value}</p>
-        </div>
-      `
+    const upperCaseStateName = computed(() => {
+      console.log('computed')
+      return state.name.toUpperCase()
     })
 
-    setTimeout(() => {
-      name.value = 'jingzhi2'
-      age.value = 19
-    }, 1000);
+    effect(() => {
+      console.log(upperCaseStateName.value)
+      console.log(upperCaseStateName.value)
+      console.log(upperCaseStateName.value)
+    })
+
+    state.name = 'jingzhi2'
   </script>
 </body>
 </html>

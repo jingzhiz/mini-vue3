@@ -71,22 +71,22 @@ class ObjectRefImpl {
   _value
   _deps
 
-  constructor(public _target, public _key) { }
+  constructor(public target, public key) { }
 
   get value() {
     trackRefValue(this)
-    return this._target[this._key]
+    return this.target[this.key]
   }
 
   set value(newVal) {
-    if (newVal !== this._target[this._key]) {
-      this._target[this._key] = newVal
+    if (newVal !== this.target[this.key]) {
+      this.target[this.key] = newVal
       triggerRefValue(this)
     }
   }
 }
 
-function trackRefValue(ref) {
+export function trackRefValue(ref) {
   if (activeEffect) {
     trackEffect(
       activeEffect,
@@ -95,7 +95,7 @@ function trackRefValue(ref) {
   }
 }
 
-function triggerRefValue(ref) {
+export function triggerRefValue(ref) {
   let dep = ref._deps
 
   if (dep) {
