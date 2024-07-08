@@ -16,7 +16,9 @@
     //   reactive,
     //   effect,
     //   proxyRefs,
-    //   computed
+    //   computed,
+    //   watch,
+    //   watchEffect
     // } from "/node_modules/vue/dist/vue.esm-browser.js"
     import {
       ref,
@@ -26,23 +28,25 @@
       effect,
       isRef,
       proxyRefs,
-      computed
+      computed,
+      watch
     } from "./reactivity.js"
 
-    const state = reactive({ name: 'jingzhi', age: 18 })
+    const state = reactive({ name: 'jingzhi', age: 18, address: { city: 'beijing' }})
 
-    const upperCaseStateName = computed(() => {
-      console.log('computed')
-      return state.name.toUpperCase()
-    })
-
-    effect(() => {
-      console.log(upperCaseStateName.value)
-      console.log(upperCaseStateName.value)
-      console.log(upperCaseStateName.value)
-    })
-
-    state.name = 'jingzhi2'
+    watch(
+      state,
+      (newValue, oldValue) => {
+        console.log('watch', newValue, oldValue)
+      },
+      {
+        immediate: true,
+        deep: true,
+        depth: 1
+      }
+    )
+    // state.name = 'jingzhi2'
+    state.address.city = 'shanghai'
   </script>
 </body>
 </html>
