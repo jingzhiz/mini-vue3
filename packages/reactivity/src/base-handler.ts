@@ -1,6 +1,6 @@
 import { isObject } from "@vue/shared"
 import { reactive } from "./reactivity"
-import { tracker, trigger } from "./reactivityEffect"
+import { tracker, trigger } from "./reactivity-effect"
 import { ReactivityFlags } from './constants'
 
 export const mutableHandlers: ProxyHandler<any> = {

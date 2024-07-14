@@ -1,6 +1,6 @@
 import { toReactive } from "./reactivity"
 import { activeEffect, trackEffect, triggerEffect } from "./effect"
-import { createDep } from "./reactivityEffect"
+import { createDep } from "./reactivity-effect"
 import { ReactivityFlags } from "./constants"
 
 export function ref(target) {

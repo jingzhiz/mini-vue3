@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import {
+      h,
+      render,
+      createRenderer
+    } from "/node_modules/vue/dist/vue.esm-browser.js"
+
+    import {
+      rendererOptions
+    } from './runtime-dom.js'
+
+    const element = h(
+      'h1',
+      {
+        a: true,
+        style: { color: 'red' },
+        class: 'text',
+        onClick: () => {
+          console.log('click')
+        }
+      },
+      'hello world'
+    )
+
+    // render(element, app)
+
+    const renderer = createRenderer(rendererOptions)
+
+    renderer.render(element, app)
+  </script>
+</body>
+</html>

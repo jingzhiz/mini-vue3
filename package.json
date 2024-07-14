@@ -6,7 +6,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "node ./scripts/dev.js reactivity -f esm"
+    "dev": "node ./scripts/dev.js runtime-dom -f esm"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +17,9 @@
     "typescript": "^5.5.2"
   },
   "dependencies": {
+    "@vue/reactivity": "^3.4.31",
+    "@vue/runtime-core": "^3.4.31",
+    "@vue/shared": "^3.4.31",
     "vue": "^3.4.30"
   }
 }
