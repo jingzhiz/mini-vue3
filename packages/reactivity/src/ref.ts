@@ -1,6 +1,7 @@
 import { toReactive } from "./reactivity"
 import { activeEffect, trackEffect, triggerEffect } from "./effect"
 import { createDep } from "./reactivityEffect"
+import { ReactivityFlags } from "./constants"
 
 export function ref(target) {
   return createRef(target)
@@ -17,8 +18,8 @@ export function toRefs(target) {
   }, {})
 }
 
-export function isRef(target) {
-  return !!target?.__v_isRef
+export function isRef(value) {
+  return !!(value && value[ReactivityFlags.IS_REF])
 }
 
 export function proxyRefs(objectWithRef) {
@@ -90,6 +91,7 @@ export function trackRefValue(ref) {
   if (activeEffect) {
     trackEffect(
       activeEffect,
+      // ref._deps = ref._deps || createDep('undefined', () => ref.dep = undefined)
       ref._deps = createDep('value', () => ref.dep = undefined)
     )
   }

@@ -29,24 +29,46 @@
       isRef,
       proxyRefs,
       computed,
-      watch
+      watch,
+      watchEffect
     } from "./reactivity.js"
 
-    const state = reactive({ name: 'jingzhi', age: 18, address: { city: 'beijing' }})
-
+    const queue = []
+    let timer = 3000
+    const queryStr = ref('')
+    const getData = (timer) => {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          resolve(timer)
+        }, timer)
+      })
+    }
     watch(
-      state,
-      (newValue, oldValue) => {
-        console.log('watch', newValue, oldValue)
-      },
-      {
-        immediate: true,
-        deep: true,
-        depth: 1
+      queryStr,
+      async (val, oldVal, onCleanup) => {
+        console.log('queryStr changed', val)
+
+        let flag = true
+        // for (let i = 0; i < queue.length; i++) {
+        //   queue[i]()
+        // }
+        // queue.push(() => (flag = false))
+
+        onCleanup(() => flag = false)
+
+        timer -= 1000
+
+        const result = await getData(timer)
+
+        if (flag) {
+          app.innerHTML = result
+        }
       }
     )
-    // state.name = 'jingzhi2'
-    state.address.city = 'shanghai'
+    setTimeout(() => {
+      queryStr.value = '123'
+      queryStr.value = '456'
+    }, 1000);
   </script>
 </body>
 </html>
