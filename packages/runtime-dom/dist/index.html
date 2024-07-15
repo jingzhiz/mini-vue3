@@ -21,20 +21,7 @@
       'h1',
       {
         a: true,
-        style: { color: 'red' },
-        class: 'text',
-        onClick: () => {
-          console.log('click')
-        }
-      },
-      h('div', 'hello world')
-    )
-
-    const element2 = h(
-      'h1',
-      {
-        a: true,
-        style: { color: 'blue' },
+        style: { color: 'red', fontSize: '18px' },
         class: 'text',
         onClick: () => {
           console.log('click')
@@ -43,7 +30,22 @@
       'jingzhi'
     )
 
-    console.log(element1)
+    const element2 = h(
+      'h1',
+      {
+        b: true,
+        style: { color: 'blue', background: 'yellow' },
+        class: 'text',
+        onClick: () => {
+          console.log('click')
+        }
+      },
+      [
+        h('div', 'hello2'),
+        h('div', 'world2')
+      ]
+    )
+
     render(element1, app)
 
     setTimeout(() => {

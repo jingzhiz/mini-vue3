@@ -1,6 +1,6 @@
 /** 普通属性 */
 export function patchAttr(el, key, value) {
-  if (value === null) {
+  if (!value) {
     el.removeAttribute(key)
   } else {
     el.setAttribute(key, value)
