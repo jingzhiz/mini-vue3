@@ -8,17 +8,16 @@
 <body>
   <div id="app"></div>
   <script type="module">
+    // import {
+    //   h
+    // } from "/node_modules/vue/dist/vue.esm-browser.js"
+
     import {
       h,
-      render,
-      createRenderer
-    } from "/node_modules/vue/dist/vue.esm-browser.js"
-
-    import {
-      rendererOptions
+      render
     } from './runtime-dom.js'
 
-    const element = h(
+    const element1 = h(
       'h1',
       {
         a: true,
@@ -28,14 +27,28 @@
           console.log('click')
         }
       },
-      'hello world'
+      h('div', 'hello world')
     )
 
-    // render(element, app)
+    const element2 = h(
+      'h1',
+      {
+        a: true,
+        style: { color: 'blue' },
+        class: 'text',
+        onClick: () => {
+          console.log('click')
+        }
+      },
+      'jingzhi'
+    )
 
-    const renderer = createRenderer(rendererOptions)
+    console.log(element1)
+    render(element1, app)
 
-    renderer.render(element, app)
+    setTimeout(() => {
+      render(element2, app)
+    }, 2000);
   </script>
 </body>
 </html>

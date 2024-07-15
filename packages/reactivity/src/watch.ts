@@ -1,7 +1,7 @@
 import { isFunction, isObject } from "@vue/shared"
 import { ReactiveEffect } from './effect'
 import { isReactive } from "./reactivity"
-import { isRef } from "vue"
+import { isRef } from "./ref"
 
 export function watch(source, cb, options = {} as any) {
   return doWatch(source, cb, options)

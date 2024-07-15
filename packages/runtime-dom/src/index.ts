@@ -1,11 +1,11 @@
-export * from '@vue/reactivity'
 import patchProp from './patch-prop'
 import { nodeOps } from './node-ops'
+import { createRenderer } from '@vue/runtime-core'
 
-export const rendererOptions = Object.assign({}, nodeOps, { patchProp })
+const rendererOptions = Object.assign({}, nodeOps, { patchProp })
 
-function createRenderer(options) {
-
+export const render = (vnode, container) => {
+  return createRenderer(rendererOptions).render(vnode, container)
 }
 
-createRenderer(rendererOptions)
+export * from '@vue/runtime-core'
