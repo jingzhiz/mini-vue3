@@ -1,6 +1,5 @@
 import { ShapeFlags } from "@vue/shared"
 import { isSameVnodeType } from './create-vnode'
-import patchProp from "packages/runtime-dom/src/patch-prop"
 
 export function createRenderer(renderOptions) {
   const {
@@ -21,7 +20,7 @@ export function createRenderer(renderOptions) {
     })
   }
 
-  const mountElement = (vnode, container) => {
+  const mountElement = (vnode, container, anchor = null) => {
     const { type, props, children, shapeFlag } = vnode
 
     const el = vnode.el = hostCreateElement(type)
@@ -45,12 +44,12 @@ export function createRenderer(renderOptions) {
       mountChildren(children, el)
     }
 
-    hostInsert(el, container)
+    hostInsert(el, container, anchor)
   }
 
-  const processElement = (n1, n2, container) => {
+  const processElement = (n1, n2, container, anchor = null) => {
     if (n1 === null) {
-      mountElement(n2, container)
+      mountElement(n2, container, anchor)
     } else {
       patchElement(n1, n2, container)
     }
@@ -71,6 +70,96 @@ export function createRenderer(renderOptions) {
 
   // diff
   const patchKeyedChildren = (c1, c2, container) => {
+    let index = 0
+    let e1 = c1.length - 1
+    let e2 = c2.length - 1
+
+    // 头部正序
+    while (index <= e1 && index <= e2) {
+      const prevChild = c1[index]
+      const nextChild = c2[index]
+
+      if (isSameVnodeType(prevChild, nextChild)) {
+        patch(prevChild, nextChild, container)
+      } else {
+        break
+      }
+      index++
+    }
+
+    // 尾部倒序
+    while (index <= e1 && index <= e2) {
+      const prevChild = c1[e1]
+      const nextChild = c2[e2]
+
+      if (isSameVnodeType(prevChild, nextChild)) {
+        patch(prevChild, nextChild, container)
+      } else {
+        break
+      }
+      e1--
+      e2--
+    }
+
+    if (index > e1) {
+      // 新节点数量大于旧节点
+      if (index <= e2) {
+        let nextPos = e2 + 1
+        const anchor = c2[nextPos]?.el
+
+        while (index <= e2) {
+          patch(null, c2[index], container, anchor)
+          index++
+        }
+      }
+    } else if (index > e2) {
+      // 旧节点数量大于新节点
+      if (index <= e1) {
+        while (index <= e1) {
+          unmount(c1[index])
+          index++
+        }
+      }
+    } else {
+      let s1 = index
+      let s2 = index
+      // 创建一个映射表用于快速查找，判断旧节点是否在新节点里，有则更新，无则删除
+      const keyToNewIndexMap = new Map()
+
+      // 遍历新节点存入key与index的映射
+      for (let i = s2; i <= e2; i++) {
+        const nextChild = c2[i]
+        keyToNewIndexMap.set(nextChild.key, i)
+      }
+
+      // 遍历旧节点，新节点中不存在则删除，存在则更新
+      for (let i = s1; i <= e1; i++) {
+        const prevChild = c1[i]
+        if (keyToNewIndexMap.has(prevChild.key)) {
+          const nextIndex = keyToNewIndexMap.get(prevChild.key)
+          patch(prevChild, c2[nextIndex], container)
+        } else {
+          unmount(prevChild)
+        }
+      }
+
+      // 要倒序插入的个数
+      let toBePatched = e2 - s2 + 1
+
+      // 倒序比对每一个元素，做插入操作
+      for (let i = toBePatched - 1; i >= 0; i--) {
+        const nextIndex = i + s2
+        const anchor = c2[nextIndex + 1]?.el
+        const vnode = c2[nextIndex]
+
+        // 插入的过程中，新的节点可能更多，新加入的节点则创建
+        if (!vnode.el) {
+          patch(null, vnode, container, anchor)
+        } else {
+          hostInsert(vnode.el, container, anchor)
+        }
+      }
+    }
   }
 
   const patchChildren = (n1, n2, container) => {
@@ -133,7 +222,7 @@ export function createRenderer(renderOptions) {
     patchChildren(n1, n2, el)
   }
 
-  const patch = (n1, n2, container = null) => {
+  const patch = (n1, n2, container, anchor = null) => {
     if (n1 === n2) return
 
     if (n1 && !isSameVnodeType(n1, n2)) {
@@ -141,7 +230,7 @@ export function createRenderer(renderOptions) {
       n1 = null
     }
 
-    processElement(n1, n2, container)
+    processElement(n1, n2, container, anchor)
   }
 
   const unmount = (vnode) => hostRemove(vnode.el)

@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <style>
+    p {
+      margin: 10px 0;
+    }
+  </style>
 </head>
 <body>
   <div id="app"></div>
@@ -19,30 +24,29 @@
 
     const element1 = h(
       'h1',
-      {
-        a: true,
-        style: { color: 'red', fontSize: '18px' },
-        class: 'text',
-        onClick: () => {
-          console.log('click')
-        }
-      },
-      'jingzhi'
+      [
+        h('p', { key: 'a' }, 'a'),
+        h('p', { key: 'b' }, 'b'),
+        h('p', { key: 'c' }, 'c'),
+        h('p', { key: 'd' }, 'd'),
+        h('p', { key: 'e', style: { color: 'red'}  }, 'e'),
+        h('p', { key: 'q' }, 'q'),
+        h('p', { key: 'f' }, 'f'),
+        h('p', { key: 'g' }, 'g')
+      ]
     )
 
     const element2 = h(
       'h1',
-      {
-        b: true,
-        style: { color: 'blue', background: 'yellow' },
-        class: 'text',
-        onClick: () => {
-          console.log('click')
-        }
-      },
       [
-        h('div', 'hello2'),
-        h('div', 'world2')
+        h('p', { key: 'a' }, 'a'),
+        h('p', { key: 'b' }, 'b'),
+        h('p', { key: 'e', style: { color: 'green'}  }, 'e'),
+        h('p', { key: 'c' }, 'c'),
+        h('p', { key: 'd' }, 'd'),
+        h('p', { key: 'h' }, 'h'),
+        h('p', { key: 'f' }, 'f'),
+        h('p', { key: 'g' }, 'g')
       ]
     )
 
