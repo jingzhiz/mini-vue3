@@ -25,19 +25,18 @@
     } from './runtime-dom.js'
 
     const VueComponent = {
-      data() {
-        return {
-          name: 'jingzhi',
-          age: 18
+      props: {
+        name: {
+          type: String,
+          required: true
+        },
+        age: {
+          type: Number,
+          required: true
         }
       },
-      render() {
-        console.log('render')
-        setTimeout(() => {
-          this.age++
-          this.age++
-          this.age++
-        }, 1000);
+      render(proxy) {
+        console.log('render', proxy)
         return h('div', [
           h(Text, `my name is ${this.name}，`),
           h(Text, `my age is ${this.age}`)
@@ -45,7 +44,7 @@
       }
     }
 
-    render(h(VueComponent), app)
+    render(h(VueComponent, {test: 'test', name: 'jingzhi', age: 18}), app)
 
     setTimeout(() => {
 

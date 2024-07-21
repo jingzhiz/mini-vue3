@@ -49,9 +49,29 @@ export function createRenderer(renderOptions) {
     hostInsert(el, container, anchor)
   }
 
+  const initProps = (instance, rawProps) => {
+    const props = {}
+    const attrs = {}
+    const propsOptions = instance.propsOptions || {}
+
+    Object.keys(rawProps).forEach((key) => {
+      const value = rawProps[key]
+
+      if (key in propsOptions) {
+        props[key] = value
+      } else {
+        attrs[key] = value
+      }
+    })
+
+    instance.props = reactive(props)
+    instance.attrs = attrs
+  }
+
   const mountComponent = (vnode, container, anchor = null) => {
     const {
-      data = () => { },
+      props: propsOptions = {},
+      data = () => ({}),
       render
     } = vnode.type
 
@@ -59,11 +79,21 @@ export function createRenderer(renderOptions) {
 
     const instance = {
       state,
+      props: {},
+      attrs: {},
+      propsOptions,
       vnode,
       subTree: null,
       isMounted: false,
-      update: null
+      update: null,
+      component: null
     }
+
+    vnode.component = instance
+
+    // 根据定义的 props 区分 props 和 attrs
+    initProps(instance, vnode.props)
+
     const componentFn = () => {
       if (!instance.isMounted) {
         const subTree = (instance.subTree = render.call(state, state))
