@@ -134,6 +134,7 @@ function getSequence(arr) {
 
 // packages/runtime-core/src/create-vnode.ts
 var Text = Symbol("Text");
+var Fragment = Symbol("Fragment");
 function isVnode(value) {
   return !!value?.__v_isVnode;
 }
@@ -204,6 +205,13 @@ function createRenderer(renderOptions) {
       if (n1.children !== n2.children) {
         hostSetText(el, n2.children);
       }
+    }
+  };
+  const processFragment = (n1, n2, container) => {
+    if (n1 === null) {
+      mountChildren(n2.children, container);
+    } else {
+      patchChildren(n1, n2, container);
     }
   };
   const processElement = (n1, n2, container, anchor = null) => {
@@ -350,11 +358,20 @@ function createRenderer(renderOptions) {
       case Text:
         processText(n1, n2, container);
         break;
+      case Fragment:
+        processFragment(n1, n2, container);
+        break;
       default:
         processElement(n1, n2, container, anchor);
     }
   };
-  const unmount = (vnode) => hostRemove(vnode.el);
+  const unmount = (vnode) => {
+    if (vnode.type === Fragment) {
+      unmountChildren(vnode.children);
+    } else {
+      hostRemove(vnode.el);
+    }
+  };
   const unmountChildren = (children) => {
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
@@ -404,6 +421,7 @@ var render = (vnode, container) => {
   return createRenderer(rendererOptions).render(vnode, container);
 };
 export {
+  Fragment,
   Text,
   createRenderer,
   createVnode,

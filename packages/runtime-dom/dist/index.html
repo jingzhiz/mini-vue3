@@ -20,13 +20,14 @@
     import {
       h,
       render,
-      Text
+      Text,
+      Fragment
     } from './runtime-dom.js'
 
-    render(h(Text, 'jingzhi'), app)
+    render(h(Fragment, [h('div', 'hello'), h('a', 'world')]), app)
 
     setTimeout(() => {
-      // render(h(Text, 'jingzhi99'), app)
+      // render(h(Fragment, [h('div', 'hello'), h('a', 'hello')]), app)
       render(null, app)
     }, 2000);
   </script>

@@ -1,5 +1,5 @@
 import { ShapeFlags, getSequence } from "@vue/shared"
-import { Text, isSameVnodeType } from './create-vnode'
+import { Text, Fragment, isSameVnodeType } from './create-vnode'
 
 export function createRenderer(renderOptions) {
   const {
@@ -56,6 +56,14 @@ export function createRenderer(renderOptions) {
       if (n1.children !== n2.children) {
         hostSetText(el, n2.children)
       }
+    }
+  }
+
+  const processFragment = (n1, n2, container) => {
+    if (n1 === null) {
+      mountChildren(n2.children, container)
+    } else {
+      patchChildren(n1, n2, container)
     }
   }
 
@@ -259,12 +267,21 @@ export function createRenderer(renderOptions) {
       case Text:
         processText(n1, n2, container)
         break
+      case Fragment:
+        processFragment(n1, n2, container)
+        break
       default:
         processElement(n1, n2, container, anchor)
     }
   }
 
-  const unmount = (vnode) => hostRemove(vnode.el)
+  const unmount = (vnode) => {
+    if (vnode.type === Fragment) {
+      unmountChildren(vnode.children)
+    } else {
+      hostRemove(vnode.el)
+    }
+  }
 
   const unmountChildren = (children) => {
     for (let i = 0; i < children.length; i++) {
