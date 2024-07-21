@@ -1,5 +1,7 @@
 import { ShapeFlags, getSequence } from "@vue/shared"
+import { reactive, ReactiveEffect } from "@vue/reactivity"
 import { Text, Fragment, isSameVnodeType } from './create-vnode'
+import { queueJob } from './scheduler'
 
 export function createRenderer(renderOptions) {
   const {
@@ -47,6 +49,42 @@ export function createRenderer(renderOptions) {
     hostInsert(el, container, anchor)
   }
 
+  const mountComponent = (vnode, container, anchor = null) => {
+    const {
+      data = () => { },
+      render
+    } = vnode.type
+
+    const state = reactive(data())
+
+    const instance = {
+      state,
+      vnode,
+      subTree: null,
+      isMounted: false,
+      update: null
+    }
+    const componentFn = () => {
+      if (!instance.isMounted) {
+        const subTree = (instance.subTree = render.call(state, state))
+
+        patch(null, subTree, container, anchor)
+
+        instance.isMounted = true
+      } else {
+        const subTree = render.call(state, state)
+
+        patch(instance.subTree, subTree, container, anchor)
+      }
+    }
+
+    const update = (instance.update = () => effect.run())
+    const effect = new ReactiveEffect(componentFn, () => {
+      queueJob(update)
+    })
+    update()
+  }
+
   const processText = (n1, n2, container) => {
     if (n1 === null) {
       n2.el = hostCreateText(n2.children)
@@ -72,6 +110,14 @@ export function createRenderer(renderOptions) {
       mountElement(n2, container, anchor)
     } else {
       patchElement(n1, n2, container)
+    }
+  }
+
+  const processComponent = (n1, n2, container, anchor) => {
+    if (n1 === null) {
+      mountComponent(n2, container, anchor)
+    } else {
+      // updateComponent(n1, n2)
     }
   }
 
@@ -261,7 +307,7 @@ export function createRenderer(renderOptions) {
       n1 = null
     }
 
-    const { type } = n2
+    const { type, shapeFlag } = n2
 
     switch (type) {
       case Text:
@@ -271,7 +317,11 @@ export function createRenderer(renderOptions) {
         processFragment(n1, n2, container)
         break
       default:
-        processElement(n1, n2, container, anchor)
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          processElement(n1, n2, container, anchor)
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          processComponent(n1, n2, container, anchor)
+        }
     }
   }
 

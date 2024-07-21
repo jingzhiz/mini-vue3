@@ -24,11 +24,31 @@
       Fragment
     } from './runtime-dom.js'
 
-    render(h(Fragment, [h('div', 'hello'), h('a', 'world')]), app)
+    const VueComponent = {
+      data() {
+        return {
+          name: 'jingzhi',
+          age: 18
+        }
+      },
+      render() {
+        console.log('render')
+        setTimeout(() => {
+          this.age++
+          this.age++
+          this.age++
+        }, 1000);
+        return h('div', [
+          h(Text, `my name is ${this.name}，`),
+          h(Text, `my age is ${this.age}`)
+        ])
+      }
+    }
+
+    render(h(VueComponent), app)
 
     setTimeout(() => {
-      // render(h(Fragment, [h('div', 'hello'), h('a', 'hello')]), app)
-      render(null, app)
+
     }, 2000);
   </script>
 </body>
