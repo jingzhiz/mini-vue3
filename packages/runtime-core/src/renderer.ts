@@ -1,4 +1,4 @@
-import { ShapeFlags } from "@vue/shared"
+import { ShapeFlags, getSequence } from "@vue/shared"
 import { isSameVnodeType } from './create-vnode'
 
 export function createRenderer(renderOptions) {
@@ -125,6 +125,10 @@ export function createRenderer(renderOptions) {
       let s2 = index
       // 创建一个映射表用于快速查找，判断旧节点是否在新节点里，有则更新，无则删除
       const keyToNewIndexMap = new Map()
+      // 要倒序插入的个数
+      let toBePatched = e2 - s2 + 1
+      // 新旧节点索引映射，0 代表没有被 patch
+      const newIndexToOldMapIndex = new Array(toBePatched).fill(0)
 
       // 遍历新节点存入key与index的映射
       for (let i = s2; i <= e2; i++) {
@@ -138,15 +142,17 @@ export function createRenderer(renderOptions) {
         if (keyToNewIndexMap.has(prevChild.key)) {
           const nextIndex = keyToNewIndexMap.get(prevChild.key)
           patch(prevChild, c2[nextIndex], container)
+          newIndexToOldMapIndex[nextIndex - s2] = i + 1 // 避免 0 出现的歧义，进行 +1 处理
         } else {
           unmount(prevChild)
         }
       }
 
-      // 要倒序插入的个数
-      let toBePatched = e2 - s2 + 1
+      // 获取连续的元素索引数组
+      const sequence = getSequence(newIndexToOldMapIndex)
+      let lastIndex = sequence.length - 1
 
-      // 倒序比对每一个元素，做插入操作
+      // 比对每一个元素，做倒序插入操作
       for (let i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = i + s2
         const anchor = c2[nextIndex + 1]?.el
@@ -156,7 +162,13 @@ export function createRenderer(renderOptions) {
         if (!vnode.el) {
           patch(null, vnode, container, anchor)
         } else {
-          hostInsert(vnode.el, container, anchor)
+          if (i === sequence[lastIndex]) {
+            // diff 优化，如果新旧节点索引相同，则无需移动
+            lastIndex--
+          } else {
+            // 将元素插入
+            hostInsert(vnode.el, container, anchor)
+          }
         }
       }
     }
@@ -177,7 +189,6 @@ export function createRenderer(renderOptions) {
      * 5. 新的是空，旧的是文本，移除文本
      * 6. 新的是数组，旧的是文本，移除文本挂载新的
      */
-
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // 新的是文本，旧的是数组，则直接新的替换旧的
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {

@@ -93,6 +93,45 @@ function isString(value) {
   return is(value, "String");
 }
 
+// packages/shared/src/sequence.ts
+function getSequence(arr) {
+  const result = [0];
+  const p = result.slice(0);
+  let start, end, middle;
+  const length = arr.length;
+  for (let i = 0; i < length; i++) {
+    const arrI = arr[i];
+    if (arrI !== 0) {
+      if (arr[result.at(-1)] < arrI) {
+        p[i] = result.at(-1);
+        result.push(i);
+        continue;
+      }
+    }
+    start = 0;
+    end = result.length - 1;
+    while (start < end) {
+      middle = (start + end) / 2 | 0;
+      if (arr[result[middle]] < arrI) {
+        start = middle + 1;
+      } else {
+        end = middle;
+      }
+    }
+    if (arrI < arr[result[start]]) {
+      p[i] = result[start - 1];
+      result[start] = i;
+    }
+  }
+  let l = result.length;
+  let last = result.at(-1);
+  while (l-- > 0) {
+    result[l] = last;
+    last = p[last];
+  }
+  return result;
+}
+
 // packages/runtime-core/src/create-vnode.ts
 function isVnode(value) {
   return !!value?.__v_isVnode;
@@ -218,6 +257,8 @@ function createRenderer(renderOptions) {
       let s1 = index;
       let s2 = index;
       const keyToNewIndexMap = /* @__PURE__ */ new Map();
+      let toBePatched = e2 - s2 + 1;
+      const newIndexToOldMapIndex = new Array(toBePatched).fill(0);
       for (let i = s2; i <= e2; i++) {
         const nextChild = c2[i];
         keyToNewIndexMap.set(nextChild.key, i);
@@ -227,11 +268,13 @@ function createRenderer(renderOptions) {
         if (keyToNewIndexMap.has(prevChild.key)) {
           const nextIndex = keyToNewIndexMap.get(prevChild.key);
           patch(prevChild, c2[nextIndex], container);
+          newIndexToOldMapIndex[nextIndex - s2] = i + 1;
         } else {
           unmount(prevChild);
         }
       }
-      let toBePatched = e2 - s2 + 1;
+      const sequence = getSequence(newIndexToOldMapIndex);
+      let lastIndex = sequence.length - 1;
       for (let i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = i + s2;
         const anchor = c2[nextIndex + 1]?.el;
@@ -239,7 +282,11 @@ function createRenderer(renderOptions) {
         if (!vnode.el) {
           patch(null, vnode, container, anchor);
         } else {
-          hostInsert(vnode.el, container, anchor);
+          if (i === sequence[lastIndex]) {
+            lastIndex--;
+          } else {
+            hostInsert(vnode.el, container, anchor);
+          }
         }
       }
     }
