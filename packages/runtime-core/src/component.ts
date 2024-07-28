@@ -1,4 +1,4 @@
-import { reactive } from "@vue/reactivity"
+import { proxyRefs, reactive } from "@vue/reactivity"
 import { hasOwn, isFunction } from "@vue/shared"
 
 export function createComponentInstance(vnode) {
@@ -13,6 +13,7 @@ export function createComponentInstance(vnode) {
     update: null,
     component: null,
     proxy: null, // 代理 props/attrs/data
+    setupState: null
   }
 
   return instance
@@ -24,12 +25,14 @@ const publicProperty = {
 
 const handler = {
   get(target, key) {
-    const { data, props } = target
+    const { data, props, setupState } = target
 
     if (data && hasOwn(data, key)) {
       return data[key]
     } else if (props && hasOwn(props, key)) {
       return props[key]
+    } else if (setupState && hasOwn(setupState, key)) {
+      return setupState[key]
     }
 
     const getter = publicProperty[key]
@@ -90,7 +93,24 @@ export function setupComponent(instance) {
 
   initProps(instance, vnode.props)
 
-  initData(instance, vnode.type.data)
+  const { data, setup, render } = vnode.type
 
-  instance.render = vnode.type.render
+  initData(instance, data)
+
+  if (setup) {
+    const setupContext = {
+
+    }
+
+    const setupResult = setup(instance.props, setupContext)
+
+    if (isFunction(setupResult)) {
+      instance.render = setupResult
+    } else {
+      // 自动脱 ref
+      instance.setupState = proxyRefs(setupResult)
+    }
+  }
+
+  instance.render || (instance.render = render)
 }

@@ -18,6 +18,7 @@
     // } from "/node_modules/vue/dist/vue.esm-browser.js"
 
     import {
+      ref,
       h,
       render,
       Text,
@@ -34,20 +35,37 @@
     }
 
     const VueComponent = {
-      data() {
-        return {
-          flag: true,
-          address: 'beijing'
+      setup(props, {}) {
+        const flag = ref(true)
+
+        const onClick = () => {
+          flag.value = !flag.value
+        }
+
+        // return {
+        //   flag,
+        //   onClick
+        // }
+        return (proxy) => {
+          return h('div', [
+            h('button', {
+              onClick: onClick
+            }, 'click me'),
+            h(RenderComponent, {
+              address: flag.value ? 'shanghai' : 'beijing'
+            })
+          ])
         }
       },
-      render(proxy) {
+      render(props) {
+        console.log(props)
 
         return h('div', [
           h('button', {
-            onClick: () => this.flag = !this.flag
+            onClick: props.onClick
           }, 'click me'),
           h(RenderComponent, {
-            address: this.flag ? 'shanghai' : 'beijing'
+            address: props.flag ? 'shanghai' : 'beijing'
           })
         ])
       }

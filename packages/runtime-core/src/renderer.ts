@@ -356,7 +356,6 @@ export function createRenderer(renderOptions) {
     const instance = (n2.component = n1.component)
 
     if (shouldComponentUpdate(n1, n2)) {
-      console.log('enter')
       instance.next = n2
       instance.update()
     }

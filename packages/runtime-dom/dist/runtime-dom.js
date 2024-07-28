@@ -79,6 +79,106 @@ var nodeOps = {
   nextSibling: (node) => node.nextSibling
 };
 
+// packages/reactivity/src/effect.ts
+function effect(fn, options) {
+  const _effect = new ReactiveEffect(fn, () => {
+    _effect.run();
+  });
+  if (options) {
+    Object.assign(_effect, options);
+  }
+  _effect.run();
+  const runner = _effect.run.bind(_effect);
+  runner.effect = _effect;
+  return runner;
+}
+var activeEffect;
+function preCleanEffect(effect2) {
+  effect2._trackId++;
+  effect2._depsLen = 0;
+}
+function postCleanEffect(effect2) {
+  if (effect2._deps.length !== effect2._depsLen) {
+    for (let i = effect2._depsLen; i < effect2._deps.length; i++) {
+      cleanDepEffect(effect2._deps[i], effect2);
+    }
+  }
+  effect2._deps.length = effect2._depsLen;
+}
+function cleanDepEffect(dep, effect2) {
+  dep.delete(effect2);
+  if (dep.size === 0) {
+    dep.cleanup();
+  }
+}
+var ReactiveEffect = class {
+  constructor(fn, scheduler) {
+    this.fn = fn;
+    this.scheduler = scheduler;
+    this._trackId = 0;
+    // 用于记录当前 effect 执行次数（防止一个依赖在同一个 effect 中多次被收集）
+    this._deps = [];
+    // 用于记录收集器
+    this._depsLen = 0;
+    this._running = 0;
+    this._dirtyLevel = 4 /* Dirty */;
+    // 创建的 effect 默认是响应式的
+    this.active = true;
+  }
+  get dirty() {
+    return this._dirtyLevel === 4 /* Dirty */;
+  }
+  set dirty(v) {
+    this._dirtyLevel = v ? 4 /* Dirty */ : 0 /* NoDirty */;
+  }
+  run() {
+    this._dirtyLevel = 0 /* NoDirty */;
+    if (!this.active) {
+      return this.fn();
+    }
+    const lastEffect = activeEffect;
+    try {
+      activeEffect = this;
+      preCleanEffect(this);
+      this._running++;
+      return this.fn();
+    } finally {
+      this._running--;
+      postCleanEffect(this);
+      activeEffect = lastEffect;
+    }
+  }
+  stop() {
+    if (this.active) {
+      this.active = false;
+      preCleanEffect(this);
+      postCleanEffect(this);
+    }
+  }
+};
+function trackEffect(effect2, dep) {
+  if (dep.get(effect2) !== effect2._trackId) {
+    dep.set(effect2, effect2._trackId);
+    const oldDep = effect2._deps[effect2._depsLen];
+    if (oldDep !== dep) {
+      if (oldDep) {
+        cleanDepEffect(oldDep, effect2);
+      }
+      effect2._deps[effect2._depsLen++] = dep;
+    } else {
+      effect2._depsLen++;
+    }
+  }
+}
+function triggerEffect(dep) {
+  for (const effect2 of dep.keys()) {
+    if (!effect2.dirty) effect2.dirty = true;
+    if (!effect2._running) {
+      effect2?.scheduler();
+    }
+  }
+}
+
 // packages/shared/src/is.ts
 function is(value, type) {
   return Object.prototype.toString.call(value) === `[object ${type}]`;
@@ -136,125 +236,6 @@ function getSequence(arr) {
     last = p[last];
   }
   return result;
-}
-
-// packages/runtime-core/src/create-vnode.ts
-var Text = Symbol("Text");
-var Fragment = Symbol("Fragment");
-function isVnode(value) {
-  return !!value?.__v_isVnode;
-}
-function isSameVnodeType(n1, n2) {
-  return n1.type === n2.type && n1.key === n2.key;
-}
-function createVnode(type, props, children) {
-  const shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
-  const vnode = {
-    __v_isVnode: true,
-    type,
-    props,
-    children,
-    key: props?.key,
-    shapeFlag,
-    el: null
-  };
-  if (children) {
-    if (isArray(children)) {
-      vnode.shapeFlag |= 16 /* ARRAY_CHILDREN */;
-    } else {
-      children = String(children);
-      vnode.shapeFlag |= 8 /* TEXT_CHILDREN */;
-    }
-  }
-  return vnode;
-}
-
-// packages/reactivity/src/effect.ts
-var activeEffect;
-function preCleanEffect(effect) {
-  effect._trackId++;
-  effect._depsLen = 0;
-}
-function postCleanEffect(effect) {
-  if (effect._deps.length !== effect._depsLen) {
-    for (let i = effect._depsLen; i < effect._deps.length; i++) {
-      cleanDepEffect(effect._deps[i], effect);
-    }
-  }
-  effect._deps.length = effect._depsLen;
-}
-function cleanDepEffect(dep, effect) {
-  dep.delete(effect);
-  if (dep.size === 0) {
-    dep.cleanup();
-  }
-}
-var ReactiveEffect = class {
-  constructor(fn, scheduler) {
-    this.fn = fn;
-    this.scheduler = scheduler;
-    this._trackId = 0;
-    // 用于记录当前 effect 执行次数（防止一个依赖在同一个 effect 中多次被收集）
-    this._deps = [];
-    // 用于记录收集器
-    this._depsLen = 0;
-    this._running = 0;
-    this._dirtyLevel = 4 /* Dirty */;
-    // 创建的 effect 默认是响应式的
-    this.active = true;
-  }
-  get dirty() {
-    return this._dirtyLevel === 4 /* Dirty */;
-  }
-  set dirty(v) {
-    this._dirtyLevel = v ? 4 /* Dirty */ : 0 /* NoDirty */;
-  }
-  run() {
-    this._dirtyLevel = 0 /* NoDirty */;
-    if (!this.active) {
-      return this.fn();
-    }
-    const lastEffect = activeEffect;
-    try {
-      activeEffect = this;
-      preCleanEffect(this);
-      this._running++;
-      return this.fn();
-    } finally {
-      this._running--;
-      postCleanEffect(this);
-      activeEffect = lastEffect;
-    }
-  }
-  stop() {
-    if (this.active) {
-      this.active = false;
-      preCleanEffect(this);
-      postCleanEffect(this);
-    }
-  }
-};
-function trackEffect(effect, dep) {
-  if (dep.get(effect) !== effect._trackId) {
-    dep.set(effect, effect._trackId);
-    const oldDep = effect._deps[effect._depsLen];
-    if (oldDep !== dep) {
-      if (oldDep) {
-        cleanDepEffect(oldDep, effect);
-      }
-      effect._deps[effect._depsLen++] = dep;
-    } else {
-      effect._depsLen++;
-    }
-  }
-}
-function triggerEffect(dep) {
-  for (const effect of dep.keys()) {
-    if (!effect.dirty) effect.dirty = true;
-    if (!effect._running) {
-      effect?.scheduler();
-    }
-  }
 }
 
 // packages/reactivity/src/reactivity-effect.ts
@@ -323,8 +304,229 @@ function createReactiveObject(target) {
 function reactive(target) {
   return createReactiveObject(target);
 }
+function toReactive(value) {
+  return isObject(value) ? reactive(value) : value;
+}
 function isReactive(value) {
   return !!(value && value["__v_isReactive" /* IS_REACTIVE */]);
+}
+
+// packages/reactivity/src/ref.ts
+function ref(target) {
+  return createRef(target);
+}
+function toRef(target, key) {
+  return new ObjectRefImpl(target, key);
+}
+function toRefs(target) {
+  return Object.keys(target).reduce((result, key) => {
+    result[key] = toRef(target, key);
+    return result;
+  }, {});
+}
+function isRef(value) {
+  return !!(value && value["__v_isRef" /* IS_REF */]);
+}
+function proxyRefs(objectWithRef) {
+  return new Proxy(objectWithRef, {
+    get(target, key, receiver) {
+      const r = Reflect.get(target, key, receiver);
+      return isRef(r) ? r.value : r;
+    },
+    set(target, key, value, receiver) {
+      const oldValue = target[key];
+      if (isRef(oldValue)) {
+        oldValue.value = value;
+        return true;
+      } else {
+        return Reflect.set(target, key, value, receiver);
+      }
+    }
+  });
+}
+function createRef(target) {
+  return new RefImpl(target);
+}
+var RefImpl = class {
+  constructor(rawValue) {
+    this.rawValue = rawValue;
+    this.__v_isRef = true;
+    this._value = toReactive(rawValue);
+  }
+  get value() {
+    trackRefValue(this);
+    return this._value;
+  }
+  set value(newVal) {
+    if (newVal !== this.rawValue) {
+      this._value = newVal;
+      this.rawValue = newVal;
+      triggerRefValue(this);
+    }
+  }
+};
+var ObjectRefImpl = class {
+  constructor(target, key) {
+    this.target = target;
+    this.key = key;
+    this.__v_isRef = true;
+  }
+  get value() {
+    trackRefValue(this);
+    return this.target[this.key];
+  }
+  set value(newVal) {
+    if (newVal !== this.target[this.key]) {
+      this.target[this.key] = newVal;
+      triggerRefValue(this);
+    }
+  }
+};
+function trackRefValue(ref2) {
+  if (activeEffect) {
+    trackEffect(
+      activeEffect,
+      // ref._deps = ref._deps || createDep('undefined', () => ref.dep = undefined)
+      ref2._deps = createDep("value", () => ref2.dep = void 0)
+    );
+  }
+}
+function triggerRefValue(ref2) {
+  let dep = ref2._deps;
+  if (dep) {
+    triggerEffect(dep);
+  }
+}
+
+// packages/reactivity/src/computed.ts
+function computed(getterOrOption) {
+  let getter;
+  let setter;
+  if (isFunction(getterOrOption)) {
+    getter = getterOrOption;
+    setter = () => {
+    };
+  } else {
+    getter = getterOrOption.get;
+    setter = getterOrOption.set;
+  }
+  return new ComputedRefImpl(getter, setter);
+}
+var ComputedRefImpl = class {
+  constructor(getter, setter) {
+    this.getter = getter;
+    this.setter = setter;
+    this._effect = new ReactiveEffect(
+      () => getter(this._value),
+      () => {
+        triggerRefValue(this);
+      }
+    );
+  }
+  get value() {
+    if (this._effect.dirty) {
+      this._value = this._effect.run();
+      trackRefValue(this);
+    }
+    return this._value;
+  }
+  set value(value) {
+    this.setter(value);
+  }
+};
+
+// packages/reactivity/src/watch.ts
+function watch(source, cb, options = {}) {
+  return doWatch(source, cb, options);
+}
+function watchEffect(source, options = {}) {
+  return doWatch(source, null, options);
+}
+function traverse(source, depth, currentDepth = 0, seen = /* @__PURE__ */ new Set()) {
+  if (!isObject(source)) return source;
+  if (depth) {
+    currentDepth++;
+    if (currentDepth >= depth) return source;
+  }
+  if (seen.has(source)) return source;
+  for (let key in source) {
+    traverse(source[key], depth, currentDepth, seen);
+  }
+  return source;
+}
+function doWatch(source, cb, { deep, immediate }) {
+  const reactiveGetter = (source2) => traverse(source2, deep === false ? 1 : void 0);
+  let getter;
+  if (isReactive(source)) {
+    getter = () => reactiveGetter(source);
+  } else if (isRef(source)) {
+    getter = () => source.value;
+  } else if (isFunction(source)) {
+    getter = source;
+  }
+  let clean;
+  let oldValue;
+  const onCleanup = (fn) => {
+    clean = () => {
+      fn();
+      clean = void 0;
+    };
+  };
+  const job = () => {
+    if (cb) {
+      const newValue = effect2.run();
+      if (clean) clean();
+      cb(newValue, oldValue, onCleanup);
+      oldValue = newValue;
+    } else {
+      effect2.run();
+    }
+  };
+  const effect2 = new ReactiveEffect(getter, job);
+  if (cb) {
+    if (immediate) {
+      job();
+    } else {
+      oldValue = effect2.run();
+    }
+  } else {
+    effect2.run();
+  }
+  const unwatch = () => {
+    effect2.stop();
+  };
+  return unwatch;
+}
+
+// packages/runtime-core/src/create-vnode.ts
+var Text = Symbol("Text");
+var Fragment = Symbol("Fragment");
+function isVnode(value) {
+  return !!value?.__v_isVnode;
+}
+function isSameVnodeType(n1, n2) {
+  return n1.type === n2.type && n1.key === n2.key;
+}
+function createVnode(type, props, children) {
+  const shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
+  const vnode = {
+    __v_isVnode: true,
+    type,
+    props,
+    children,
+    key: props?.key,
+    shapeFlag,
+    el: null
+  };
+  if (children) {
+    if (isArray(children)) {
+      vnode.shapeFlag |= 16 /* ARRAY_CHILDREN */;
+    } else {
+      children = String(children);
+      vnode.shapeFlag |= 8 /* TEXT_CHILDREN */;
+    }
+  }
+  return vnode;
 }
 
 // packages/runtime-core/src/scheduler.ts
@@ -358,8 +560,9 @@ function createComponentInstance(vnode) {
     isMounted: false,
     update: null,
     component: null,
-    proxy: null
+    proxy: null,
     // 代理 props/attrs/data
+    setupState: null
   };
   return instance;
 }
@@ -368,11 +571,13 @@ var publicProperty = {
 };
 var handler = {
   get(target, key) {
-    const { data, props } = target;
+    const { data, props, setupState } = target;
     if (data && hasOwn(data, key)) {
       return data[key];
     } else if (props && hasOwn(props, key)) {
       return props[key];
+    } else if (setupState && hasOwn(setupState, key)) {
+      return setupState[key];
     }
     const getter = publicProperty[key];
     if (getter) {
@@ -420,8 +625,18 @@ function setupComponent(instance) {
   const { vnode } = instance;
   initProxy(instance);
   initProps(instance, vnode.props);
-  initData(instance, vnode.type.data);
-  instance.render = vnode.type.render;
+  const { data, setup, render: render2 } = vnode.type;
+  initData(instance, data);
+  if (setup) {
+    const setupContext = {};
+    const setupResult = setup(instance.props, setupContext);
+    if (isFunction(setupResult)) {
+      instance.render = setupResult;
+    } else {
+      instance.setupState = proxyRefs(setupResult);
+    }
+  }
+  instance.render || (instance.render = render2);
 }
 
 // packages/runtime-core/src/renderer.ts
@@ -474,8 +689,8 @@ function createRenderer(renderOptions) {
         instance.subTree = subTree;
       }
     };
-    const update = instance.update = () => effect.run();
-    const effect = new ReactiveEffect(componentFn, () => {
+    const update = instance.update = () => effect2.run();
+    const effect2 = new ReactiveEffect(componentFn, () => {
       queueJob(update);
     });
     update();
@@ -682,7 +897,6 @@ function createRenderer(renderOptions) {
   const updateComponent = (n1, n2) => {
     const instance = n2.component = n1.component;
     if (shouldComponentUpdate(n1, n2)) {
-      console.log("enter");
       instance.next = n2;
       instance.update();
     }
@@ -766,12 +980,30 @@ var render = (vnode, container) => {
 };
 export {
   Fragment,
+  ReactiveEffect,
   Text,
+  activeEffect,
+  computed,
   createRenderer,
   createVnode,
+  effect,
   h,
+  isReactive,
+  isRef,
   isSameVnodeType,
   isVnode,
-  render
+  proxyRefs,
+  reactive,
+  ref,
+  render,
+  toReactive,
+  toRef,
+  toRefs,
+  trackEffect,
+  trackRefValue,
+  triggerEffect,
+  triggerRefValue,
+  watch,
+  watchEffect
 };
 //# sourceMappingURL=runtime-dom.js.map
