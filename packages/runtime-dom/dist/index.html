@@ -29,8 +29,12 @@
       props: {
         address: String
       },
-      render() {
-        return h('p', this.address)
+      render(proxy) {
+        return h(Fragment, [
+          proxy.$slots.header(),
+          h('div', {}, proxy.address),
+          proxy.$slots.footer()
+        ])
       }
     }
 
@@ -42,32 +46,23 @@
           flag.value = !flag.value
         }
 
-        // return {
-        //   flag,
-        //   onClick
-        // }
         return (proxy) => {
           return h('div', [
             h('button', {
               onClick: onClick
             }, 'click me'),
-            h(RenderComponent, {
-              address: flag.value ? 'shanghai' : 'beijing'
-            })
+            h(
+              RenderComponent,
+              {
+                address: flag.value ? 'shanghai' : 'beijing',
+              },
+              {
+                header: () => h('header', 'header'),
+                footer: () => h('footer', 'footer')
+              }
+            ),
           ])
         }
-      },
-      render(props) {
-        console.log(props)
-
-        return h('div', [
-          h('button', {
-            onClick: props.onClick
-          }, 'click me'),
-          h(RenderComponent, {
-            address: props.flag ? 'shanghai' : 'beijing'
-          })
-        ])
       }
     }
 

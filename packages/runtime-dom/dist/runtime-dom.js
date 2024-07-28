@@ -521,6 +521,8 @@ function createVnode(type, props, children) {
   if (children) {
     if (isArray(children)) {
       vnode.shapeFlag |= 16 /* ARRAY_CHILDREN */;
+    } else if (isObject(children)) {
+      vnode.shapeFlag |= 32 /* SLOTS_CHILDREN */;
     } else {
       children = String(children);
       vnode.shapeFlag |= 8 /* TEXT_CHILDREN */;
@@ -554,7 +556,8 @@ function createComponentInstance(vnode) {
     vnode,
     props: {},
     attrs: {},
-    propsOptions: vnode.type.props,
+    slots: {},
+    propsOptions: vnode.props,
     data: null,
     subTree: null,
     isMounted: false,
@@ -567,7 +570,8 @@ function createComponentInstance(vnode) {
   return instance;
 }
 var publicProperty = {
-  $attrs: (instance) => instance.attrs
+  $attrs: (instance) => instance.attrs,
+  $slots: (instance) => instance.slots
 };
 var handler = {
   get(target, key) {
@@ -598,6 +602,13 @@ var handler = {
 function initProxy(instance) {
   instance.proxy = new Proxy(instance, handler);
 }
+function initSlots(instance, children) {
+  if (instance.vnode.shapeFlag & 32 /* SLOTS_CHILDREN */) {
+    instance.slots = children;
+  } else {
+    instance.slots = {};
+  }
+}
 function initProps(instance, rawProps) {
   const props = {};
   const attrs = {};
@@ -625,6 +636,7 @@ function setupComponent(instance) {
   const { vnode } = instance;
   initProxy(instance);
   initProps(instance, vnode.props);
+  initSlots(instance, vnode.children);
   const { data, setup, render: render2 } = vnode.type;
   initData(instance, data);
   if (setup) {
