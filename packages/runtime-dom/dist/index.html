@@ -29,17 +29,17 @@
       props: {
         address: String
       },
-      render(proxy) {
-        return h(Fragment, [
-          proxy.$slots.header(),
+      setup(proxy, { slots }) {
+        return () => h(Fragment, [
+          slots.header(),
           h('div', {}, proxy.address),
-          proxy.$slots.footer()
+          slots.footer()
         ])
       }
     }
 
     const VueComponent = {
-      setup(props, {}) {
+      setup(props, { emit }) {
         const flag = ref(true)
 
         const onClick = () => {
@@ -61,12 +61,15 @@
                 footer: () => h('footer', 'footer')
               }
             ),
+            h('button', {
+              onClick: () => emit('alert', 'hello')
+            }, 'click alert'),
           ])
         }
       }
     }
 
-    render(h(VueComponent, {}), app)
+    render(h(VueComponent, { onAlert: (value) => alert(value) }), app)
   </script>
 </body>
 </html>

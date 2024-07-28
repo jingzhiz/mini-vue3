@@ -565,7 +565,8 @@ function createComponentInstance(vnode) {
     component: null,
     proxy: null,
     // 代理 props/attrs/data
-    setupState: null
+    setupState: null,
+    exposed: null
   };
   return instance;
 }
@@ -640,7 +641,15 @@ function setupComponent(instance) {
   const { data, setup, render: render2 } = vnode.type;
   initData(instance, data);
   if (setup) {
-    const setupContext = {};
+    const setupContext = {
+      slots: instance.slots,
+      attrs: instance.attrs,
+      expose: (value) => instance.exposed = value,
+      emit: (event, ...payload) => {
+        const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+        instance.vnode.props[eventName]?.(...payload);
+      }
+    };
     const setupResult = setup(instance.props, setupContext);
     if (isFunction(setupResult)) {
       instance.render = setupResult;
