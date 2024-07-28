@@ -2,6 +2,10 @@ export function is(value: any, type: string) {
   return Object.prototype.toString.call(value) === `[object ${type}]`
 }
 
+export function hasOwn(target, key) {
+  return Object.hasOwn(target, key);
+}
+
 export function isObject(value: any): value is object {
   return is(value, 'Object')
 }

@@ -35,11 +35,21 @@
           required: true
         }
       },
+      data() {
+        return {
+          x: 100,
+          y: 100
+        }
+      },
       render(proxy) {
         console.log('render', proxy)
+
         return h('div', [
-          h(Text, `my name is ${this.name}，`),
-          h(Text, `my age is ${this.age}`)
+          h(Text, `my name is ${proxy.name}，`),
+          h(Text, `my age is ${proxy.age}，`),
+          h(Text, `x is ${proxy.x}，`),
+          h(Text, `y is ${proxy.y}，`),
+          h(Text, `test is ${proxy.$attrs.test}`)
         ])
       }
     }

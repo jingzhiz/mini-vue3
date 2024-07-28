@@ -83,8 +83,14 @@ var nodeOps = {
 function is(value, type) {
   return Object.prototype.toString.call(value) === `[object ${type}]`;
 }
+function hasOwn(target, key) {
+  return Object.hasOwn(target, key);
+}
 function isObject(value) {
   return is(value, "Object");
+}
+function isFunction(value) {
+  return is(value, "Function");
 }
 function isArray(value) {
   return Array.isArray(value);
@@ -340,6 +346,83 @@ function queueJob(job) {
   }
 }
 
+// packages/runtime-core/src/component.ts
+function createComponentInstance(vnode) {
+  const instance = {
+    vnode,
+    props: {},
+    propsOptions: vnode.type.props,
+    data: null,
+    attrs: {},
+    subTree: null,
+    isMounted: false,
+    update: null,
+    component: null,
+    proxy: null
+    // 代理 props/attrs/data
+  };
+  return instance;
+}
+var publicProperty = {
+  $attrs: (instance) => instance.attrs
+};
+var handler = {
+  get(target, key) {
+    const { data, props } = target;
+    if (data && hasOwn(data, key)) {
+      return data[key];
+    } else if (props && hasOwn(props, key)) {
+      return props[key];
+    }
+    const getter = publicProperty[key];
+    if (getter) {
+      return getter(target);
+    }
+  },
+  set(target, key, value) {
+    const { data, props } = target;
+    if (data && hasOwn(data, key)) {
+      data[key] = value;
+    } else if (props && hasOwn(props, key)) {
+      console.warn("Props is readonly");
+      return false;
+    }
+    return true;
+  }
+};
+function initProxy(instance) {
+  instance.proxy = new Proxy(instance, handler);
+}
+function initProps(instance, rawProps) {
+  const props = {};
+  const attrs = {};
+  const propsOptions = instance.propsOptions || {};
+  Object.keys(rawProps).forEach((key) => {
+    const value = rawProps[key];
+    if (key in propsOptions) {
+      props[key] = value;
+    } else {
+      attrs[key] = value;
+    }
+  });
+  instance.props = reactive(props);
+  instance.attrs = attrs;
+}
+function initData(instance, data) {
+  if (isFunction(data)) {
+    instance.data = reactive(data.call(instance.proxy));
+  } else {
+    console.warn("data must be a function");
+  }
+}
+function setupComponent(instance) {
+  const { vnode } = instance;
+  initProxy(instance);
+  initProps(instance, vnode.props);
+  initData(instance, vnode.type.data);
+  instance.render = vnode.type.render;
+}
+
 // packages/runtime-core/src/renderer.ts
 function createRenderer(renderOptions) {
   const {
@@ -373,48 +456,14 @@ function createRenderer(renderOptions) {
     }
     hostInsert(el, container, anchor);
   };
-  const initProps = (instance, rawProps) => {
-    const props = {};
-    const attrs = {};
-    const propsOptions = instance.propsOptions || {};
-    Object.keys(rawProps).forEach((key) => {
-      const value = rawProps[key];
-      if (key in propsOptions) {
-        props[key] = value;
-      } else {
-        attrs[key] = value;
-      }
-    });
-    instance.props = reactive(props);
-    instance.attrs = attrs;
-  };
-  const mountComponent = (vnode, container, anchor = null) => {
-    const {
-      props: propsOptions = {},
-      data = () => ({}),
-      render: render3
-    } = vnode.type;
-    const state = reactive(data());
-    const instance = {
-      state,
-      props: {},
-      attrs: {},
-      propsOptions,
-      vnode,
-      subTree: null,
-      isMounted: false,
-      update: null,
-      component: null
-    };
-    vnode.component = instance;
-    initProps(instance, vnode.props);
+  const setupRenderEffect = (instance, container, anchor) => {
     const componentFn = () => {
       if (!instance.isMounted) {
-        const subTree = instance.subTree = render3.call(state, state);
+        const subTree = instance.subTree = instance.render.call(instance.proxy, instance.proxy);
         patch(null, subTree, container, anchor);
         instance.isMounted = true;
       } else {
-        const subTree = render3.call(state, state);
+        const subTree = instance.render.call(instance.proxy, instance.proxy);
         patch(instance.subTree, subTree, container, anchor);
       }
     };
@@ -423,6 +472,11 @@ function createRenderer(renderOptions) {
       queueJob(update);
     });
     update();
+  };
+  const mountComponent = (vnode, container, anchor = null) => {
+    const instance = vnode.component = createComponentInstance(vnode);
+    setupComponent(instance);
+    setupRenderEffect(instance, container, anchor);
   };
   const processText = (n1, n2, container) => {
     if (n1 === null) {

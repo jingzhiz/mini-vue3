@@ -1,7 +1,8 @@
-import { ShapeFlags, getSequence } from "@vue/shared"
+import { ShapeFlags, hasOwn, getSequence } from "@vue/shared"
 import { reactive, ReactiveEffect } from "@vue/reactivity"
 import { Text, Fragment, isSameVnodeType } from './create-vnode'
 import { queueJob } from './scheduler'
+import { createComponentInstance, setupComponent } from "./component"
 
 export function createRenderer(renderOptions) {
   const {
@@ -49,60 +50,16 @@ export function createRenderer(renderOptions) {
     hostInsert(el, container, anchor)
   }
 
-  const initProps = (instance, rawProps) => {
-    const props = {}
-    const attrs = {}
-    const propsOptions = instance.propsOptions || {}
-
-    Object.keys(rawProps).forEach((key) => {
-      const value = rawProps[key]
-
-      if (key in propsOptions) {
-        props[key] = value
-      } else {
-        attrs[key] = value
-      }
-    })
-
-    instance.props = reactive(props)
-    instance.attrs = attrs
-  }
-
-  const mountComponent = (vnode, container, anchor = null) => {
-    const {
-      props: propsOptions = {},
-      data = () => ({}),
-      render
-    } = vnode.type
-
-    const state = reactive(data())
-
-    const instance = {
-      state,
-      props: {},
-      attrs: {},
-      propsOptions,
-      vnode,
-      subTree: null,
-      isMounted: false,
-      update: null,
-      component: null
-    }
-
-    vnode.component = instance
-
-    // 根据定义的 props 区分 props 和 attrs
-    initProps(instance, vnode.props)
-
+  const setupRenderEffect = (instance, container, anchor) => {
     const componentFn = () => {
       if (!instance.isMounted) {
-        const subTree = (instance.subTree = render.call(state, state))
+        const subTree = (instance.subTree = instance.render.call(instance.proxy, instance.proxy))
 
         patch(null, subTree, container, anchor)
 
         instance.isMounted = true
       } else {
-        const subTree = render.call(state, state)
+        const subTree = instance.render.call(instance.proxy, instance.proxy)
 
         patch(instance.subTree, subTree, container, anchor)
       }
@@ -113,6 +70,17 @@ export function createRenderer(renderOptions) {
       queueJob(update)
     })
     update()
+  }
+
+  const mountComponent = (vnode, container, anchor = null) => {
+    // 创建组件实例
+    const instance = (vnode.component = createComponentInstance(vnode))
+
+    // 给属性实例初始化赋值
+    setupComponent(instance)
+
+    // 创建 effect
+    setupRenderEffect(instance, container, anchor)
   }
 
   const processText = (n1, n2, container) => {
