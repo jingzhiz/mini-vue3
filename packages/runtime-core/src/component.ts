@@ -5,9 +5,9 @@ export function createComponentInstance(vnode) {
   const instance = {
     vnode,
     props: {},
+    attrs: {},
     propsOptions: vnode.type.props,
     data: null,
-    attrs: {},
     subTree: null,
     isMounted: false,
     update: null,
@@ -74,7 +74,7 @@ function initProps(instance, rawProps) {
   instance.attrs = attrs
 }
 
-function initData(instance, data) {
+function initData(instance, data = () => { }) {
   if (isFunction(data)) {
     // data 中可以拿到 props
     instance.data = reactive(data.call(instance.proxy))

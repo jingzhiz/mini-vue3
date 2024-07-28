@@ -351,9 +351,9 @@ function createComponentInstance(vnode) {
   const instance = {
     vnode,
     props: {},
+    attrs: {},
     propsOptions: vnode.type.props,
     data: null,
-    attrs: {},
     subTree: null,
     isMounted: false,
     update: null,
@@ -408,7 +408,8 @@ function initProps(instance, rawProps) {
   instance.props = reactive(props);
   instance.attrs = attrs;
 }
-function initData(instance, data) {
+function initData(instance, data = () => {
+}) {
   if (isFunction(data)) {
     instance.data = reactive(data.call(instance.proxy));
   } else {
@@ -457,14 +458,20 @@ function createRenderer(renderOptions) {
     hostInsert(el, container, anchor);
   };
   const setupRenderEffect = (instance, container, anchor) => {
+    const { render: render3 } = instance;
     const componentFn = () => {
       if (!instance.isMounted) {
-        const subTree = instance.subTree = instance.render.call(instance.proxy, instance.proxy);
+        const subTree = instance.subTree = render3.call(instance.proxy, instance.proxy);
         patch(null, subTree, container, anchor);
         instance.isMounted = true;
       } else {
-        const subTree = instance.render.call(instance.proxy, instance.proxy);
+        const { next } = instance;
+        if (next) {
+          updateComponentPreRender(instance, next);
+        }
+        const subTree = render3.call(instance.proxy, instance.proxy);
         patch(instance.subTree, subTree, container, anchor);
+        instance.subTree = subTree;
       }
     };
     const update = instance.update = () => effect.run();
@@ -507,6 +514,7 @@ function createRenderer(renderOptions) {
     if (n1 === null) {
       mountComponent(n2, container, anchor);
     } else {
+      updateComponent(n1, n2);
     }
   };
   const patchProps = (el, oldProps, newProps) => {
@@ -634,6 +642,50 @@ function createRenderer(renderOptions) {
     const newProps = n2.props || {};
     patchProps(el, oldProps, newProps);
     patchChildren(n1, n2, el);
+  };
+  const hasPropsChange = (oldProps, newProps) => {
+    const oldKeys = Object.keys(oldProps);
+    const newKeys = Object.keys(newProps);
+    if (oldKeys.length !== newKeys.length) {
+      return true;
+    }
+    for (let i = 0; i < newKeys.length; i++) {
+      const key = newKeys[i];
+      if (oldProps[key] !== newProps[key]) {
+        return true;
+      }
+    }
+    return false;
+  };
+  const updateProps = (instance, prevProps, nextProps) => {
+    for (let key in nextProps) {
+      instance.props[key] = nextProps[key];
+    }
+    for (let key in prevProps) {
+      if (!(key in nextProps)) {
+        delete instance.props[key];
+      }
+    }
+  };
+  const shouldComponentUpdate = (n1, n2) => {
+    const { props: prevProps, children: prevChildren } = n1;
+    const { props: nextProps, children: nextChildren } = n2;
+    if (prevChildren || nextChildren) return true;
+    if (Object.is(prevProps, nextProps)) return false;
+    return hasPropsChange(prevProps, nextProps);
+  };
+  const updateComponentPreRender = (instance, nextVNode) => {
+    instance.next = null;
+    instance.vnode = nextVNode;
+    updateProps(instance, nextVNode.props, nextVNode.props);
+  };
+  const updateComponent = (n1, n2) => {
+    const instance = n2.component = n1.component;
+    if (shouldComponentUpdate(n1, n2)) {
+      console.log("enter");
+      instance.next = n2;
+      instance.update();
+    }
   };
   const patch = (n1, n2, container, anchor = null) => {
     if (n1 === n2) return;

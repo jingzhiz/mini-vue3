@@ -24,41 +24,36 @@
       Fragment
     } from './runtime-dom.js'
 
-    const VueComponent = {
+    const RenderComponent = {
       props: {
-        name: {
-          type: String,
-          required: true
-        },
-        age: {
-          type: Number,
-          required: true
-        }
+        address: String
       },
+      render() {
+        return h('p', this.address)
+      }
+    }
+
+    const VueComponent = {
       data() {
         return {
-          x: 100,
-          y: 100
+          flag: true,
+          address: 'beijing'
         }
       },
       render(proxy) {
-        console.log('render', proxy)
 
         return h('div', [
-          h(Text, `my name is ${proxy.name}，`),
-          h(Text, `my age is ${proxy.age}，`),
-          h(Text, `x is ${proxy.x}，`),
-          h(Text, `y is ${proxy.y}，`),
-          h(Text, `test is ${proxy.$attrs.test}`)
+          h('button', {
+            onClick: () => this.flag = !this.flag
+          }, 'click me'),
+          h(RenderComponent, {
+            address: this.flag ? 'shanghai' : 'beijing'
+          })
         ])
       }
     }
 
-    render(h(VueComponent, {test: 'test', name: 'jingzhi', age: 18}), app)
-
-    setTimeout(() => {
-
-    }, 2000);
+    render(h(VueComponent, {}), app)
   </script>
 </body>
 </html>
